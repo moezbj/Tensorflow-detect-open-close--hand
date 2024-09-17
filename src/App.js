@@ -27,11 +27,28 @@ const HandTrackMobile = () => {
   const startVideo = async () => {
     if (model) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+
+        // Find the rear camera
+        const rearCamera =
+          videoDevices.find(
+            (device) =>
+              device.label.toLowerCase().includes("back") ||
+              device.label.toLowerCase().includes("rear")
+          ) || videoDevices[0];
+
+        const constraints = {
           video: {
-            facingMode: { exact: "environment" }, // Request the rear camera
+            deviceId: rearCamera.deviceId
+              ? { exact: rearCamera.deviceId }
+              : undefined,
+            facingMode: "environment",
           },
-        });
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoRef.current.srcObject = stream;
         setIsVideo(true);
 
@@ -108,11 +125,9 @@ const HandTrackMobile = () => {
   };
 
   return (
-    <div
-      
-    >
+    <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <div style={{display:"flex", justifyContent:"center"}}>
+      <div style={{ display: "flex", justifyContent: "center" }}>
         <button
           style={{ marginBottom: "20px", marginRight: "20px" }}
           onClick={startVideo}
