@@ -112,7 +112,7 @@ const HandTrackMobile = () => {
   const startVideo = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { facingMode: { exact: "environment" } },
       });
       videoRef.current.srcObject = stream;
       setIsVideo(true);
