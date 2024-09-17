@@ -13,13 +13,9 @@ const HandTrackMobile = () => {
 
   useEffect(() => {
     // Load the handTrack model once when the component mounts
-    const modelParams = {
-      maxNumBoxes: 1, // Only detect one hand
-      scoreThreshold: 0.6, // Confidence threshold
-    };
 
     handTrack
-      .load(modelParams)
+      .load()
       .then((loadedModel) => {
         setModel(loadedModel);
       })
@@ -112,14 +108,26 @@ const HandTrackMobile = () => {
   };
 
   return (
-    <div>
-      <h1>HandTrack.js Mobile</h1>
-      <button onClick={startVideo} disabled={isVideo}>
-        Start Video
-      </button>
-      <button onClick={stopVideo} disabled={!isVideo}>
-        Stop Video
-      </button>
+    <div
+      
+    >
+      <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
+      <div style={{display:"flex", justifyContent:"center"}}>
+        <button
+          style={{ marginBottom: "20px", marginRight: "20px" }}
+          onClick={startVideo}
+          disabled={isVideo}
+        >
+          Start Video
+        </button>
+        <button
+          style={{ marginBottom: "20px", marginLeft: "20px" }}
+          onClick={stopVideo}
+          disabled={!isVideo}
+        >
+          Stop Video
+        </button>
+      </div>
       <div
         style={{
           position: "relative",
