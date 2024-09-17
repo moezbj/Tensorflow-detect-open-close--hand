@@ -36,3 +36,10 @@
     transform: rotate(360deg);
   }
 }
+.video-container {
+  height: 100%  !important;
+}
+
+.canvas-container {
+  background: transparent !important;
+}
