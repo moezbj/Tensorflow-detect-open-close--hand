@@ -14,7 +14,6 @@ const HandTrackMobile = () => {
   useEffect(() => {
     // Load the handTrack model once when the component mounts
     const modelParams = {
-      flipHorizontal: true, // Flip camera for selfie view
       maxNumBoxes: 1, // Only detect one hand
       scoreThreshold: 0.6, // Confidence threshold
     };
