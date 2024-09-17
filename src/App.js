@@ -16,30 +16,40 @@ const HandTrackMobile = () => {
     setError("");
 
     try {
+      if (videoRef.current.srcObject) {
+        const existingStream = videoRef.current.srcObject;
+        const tracks = existingStream.getTracks();
+        tracks.forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      }
+
+      // Get available media devices
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
 
       // Find the rear camera
-      const rearCamera =
-        videoDevices.find(
-          (device) =>
-            device.label.toLowerCase().includes("back") ||
-            device.label.toLowerCase().includes("rear")
-        ) || videoDevices[0];
+      const rearCamera = videoDevices.find(
+        (device) =>
+          device.label.toLowerCase().includes("back") ||
+          device.label.toLowerCase().includes("rear")
+      );
 
-      const isRearCamera =
-        rearCamera && rearCamera.label.toLowerCase().includes("back");
-      console.log("ezeze", isRearCamera);
+      if (!rearCamera) {
+        console.error("Rear camera not found.");
+        setError("Rear camera not found.")
+        return;
+      }
+
+      console.log("Selected Rear Camera:", rearCamera);
+
       const constraints = {
         video: {
-          deviceId: rearCamera.deviceId
-            ? { exact: rearCamera.deviceId }
-            : undefined,
-          facingMode: true ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
+          deviceId: { exact: rearCamera.deviceId },
         },
       };
+
       console.log("constraints", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoRef.current.srcObject = stream;
@@ -82,25 +92,23 @@ const HandTrackMobile = () => {
   };
 
   const runDetection = () => {
-    if (model) {
-      const detect = () => {
-        model.detect(videoRef.current).then((predictions) => {
-          if (predictions.length > 0) {
-            const hand = predictions[0].bbox; // Bounding box of the detected hand
-            const handX = hand[0] + hand[2] / 2; // X position (center of hand)
-            const handY = hand[1] + hand[3] / 2; // Y position (center of hand)
-            setHandPosition({ x: handX, y: handY });
-            // Transform handPosition to 3D coordinates
-            setImagePosition({
-              x: (handX / window.innerWidth) * 2 - 1, // Normalized X coordinate
-              y: -(handY / window.innerHeight) * 2 + 1, // Normalized Y coordinate
-            });
-          }
-          requestAnimationFrame(detect); // Continue detection in a loop
-        });
-      };
-      detect(); // Start detection loop
-    }
+    const detect = () => {
+      model.detect(videoRef.current).then((predictions) => {
+        if (predictions.length > 0) {
+          const hand = predictions[0].bbox; // Bounding box of the detected hand
+          const handX = hand[0] + hand[2] / 2; // X position (center of hand)
+          const handY = hand[1] + hand[3] / 2; // Y position (center of hand)
+          setHandPosition({ x: handX, y: handY });
+          // Transform handPosition to 3D coordinates
+          setImagePosition({
+            x: (handX / window.innerWidth) * 2 - 1, // Normalized X coordinate
+            y: -(handY / window.innerHeight) * 2 + 1, // Normalized Y coordinate
+          });
+        }
+        requestAnimationFrame(detect); // Continue detection in a loop
+      });
+    };
+    detect(); // Start detection loop
   };
 
   const Image = ({ position }) => {
@@ -119,7 +127,6 @@ const HandTrackMobile = () => {
         imageRef.current.position.set(position.x, position.y, 0);
       }
     });
-
     return texture && isVideo ? (
       <mesh ref={imageRef}>
         <planeGeometry args={[1, 1]} />
@@ -128,9 +135,9 @@ const HandTrackMobile = () => {
     ) : null;
   };
 
-  useEffect(() => {
+  /*useEffect(() => {
     // Load the handTrack model once when the component mounts
-    /*  const modelParams = {
+      const modelParams = {
       flipHorizontal: false, // Flip camera for selfie view
       maxNumBoxes: 1, // Only detect one hand
       scoreThreshold: 0.6, // Confidence threshold
@@ -143,8 +150,9 @@ const HandTrackMobile = () => {
       .catch((err) => {
         setError(err);
         console.error("Model loading error:", err);
-      }); */
-  }, []);
+      }); 
+  }, []);*/
+  console.log("handPosition", handPosition && imagePosition);
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
