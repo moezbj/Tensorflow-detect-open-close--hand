@@ -10,6 +10,7 @@ const HandTrackMobile = () => {
   const [isVideo, setIsVideo] = useState(false);
   const [handPosition, setHandPosition] = useState(null);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [error, setError] = useState("");
 
   useEffect(() => {
     // Load the handTrack model once when the component mounts
@@ -44,14 +45,19 @@ const HandTrackMobile = () => {
               device.label.toLowerCase().includes("rear")
           ) || videoDevices[0];
 
+        const isRearCamera =
+          rearCamera && rearCamera.label.toLowerCase().includes("back");
+        console.log("isRearCamera", isRearCamera);
+
         const constraints = {
           video: {
             deviceId: rearCamera.deviceId
               ? { exact: rearCamera.deviceId }
               : undefined,
-            facingMode: "environment",
+            facingMode: true ? { exact: "environment" } : "user",
           },
         };
+        console.log("constraints", constraints);
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoRef.current.srcObject = stream;
         setIsVideo(true);
@@ -91,8 +97,7 @@ const HandTrackMobile = () => {
             setHandPosition({ x: handX, y: handY });
             // Transform handPosition to 3D coordinates
             setImagePosition({
-              x: (handX / window.innerWidth) * 2 - 1, // Normalized X coordinate
-              y: -(handY / window.innerHeight) * 2 + 1, // Normalized Y coordinate
+              imagePosition,
             });
           }
           requestAnimationFrame(detect); // Continue detection in a loop
@@ -102,7 +107,6 @@ const HandTrackMobile = () => {
     }
   };
 
-  console.log("handPosition: ", handPosition);
   const Image = ({ position }) => {
     const [texture, setTexture] = useState(null);
     const imageRef = useRef();
@@ -127,20 +131,21 @@ const HandTrackMobile = () => {
       </mesh>
     ) : null;
   };
-
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
+      <h4 style={{ textAlign: "center" }}>v: 0.0.1</h4>
+      <h5>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
-          style={{ marginBottom: "20px", marginRight: "20px" }}
+          style={{ marginBottom: "20px", marginRight: "20px", height: "40px" }}
           onClick={startVideo}
           disabled={isVideo}
         >
           Start Video
         </button>
         <button
-          style={{ marginBottom: "20px", marginLeft: "20px" }}
+          style={{ marginBottom: "20px", marginLeft: "20px", height: "40px" }}
           onClick={stopVideo}
           disabled={!isVideo}
         >
@@ -169,25 +174,27 @@ const HandTrackMobile = () => {
           autoPlay
         />
         <div>
-          <Canvas
-            shadows
-            camera={{ fov: 45 }}
-            dpr={[1, 2]}
-            style={{ position: "absolute", zIndex: 2 }}
-          >
-            <PresentationControls
-              speed={1.5}
-              global
-              zoom={0.5}
-              polar={[-0.1, Math.PI / 4]}
+          {handPosition && (
+            <Canvas
+              shadows
+              camera={{ fov: 45 }}
+              dpr={[1, 2]}
+              style={{ position: "absolute", zIndex: 2 }}
             >
-              <Stage environment={"sunset"}>
-                <ambientLight />
-                <pointLight position={[10, 10, 10]} />
-                <Image position={imagePosition} />
-              </Stage>
-            </PresentationControls>
-          </Canvas>
+              <PresentationControls
+                speed={1.5}
+                global
+                zoom={0.5}
+                polar={[-0.1, Math.PI / 4]}
+              >
+                <Stage environment={"sunset"}>
+                  <ambientLight />
+                  <pointLight position={[10, 10, 10]} />
+                  <Image position={imagePosition} />
+                </Stage>
+              </PresentationControls>
+            </Canvas>
+          )}
         </div>
       </div>
     </div>
