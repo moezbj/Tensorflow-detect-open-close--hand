@@ -12,69 +12,64 @@ const HandTrackMobile = () => {
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    // Load the handTrack model once when the component mounts
-    const modelParams = {
-      flipHorizontal: false, // Flip camera for selfie view
-      maxNumBoxes: 1, // Only detect one hand
-      scoreThreshold: 0.6, // Confidence threshold
-    };
-    handTrack
-      .load(modelParams)
-      .then((loadedModel) => {
-        setModel(loadedModel);
-      })
-      .catch((err) => {
-        console.error("Model loading error:", err);
-      });
-  }, []);
-
   const startVideo = async () => {
-    if (model) {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(
-          (device) => device.kind === "videoinput"
-        );
+    setError("");
 
-        // Find the rear camera
-        const rearCamera =
-          videoDevices.find(
-            (device) =>
-              device.label.toLowerCase().includes("back") ||
-              device.label.toLowerCase().includes("rear")
-          ) || videoDevices[0];
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
 
-        const isRearCamera =
-          rearCamera && rearCamera.label.toLowerCase().includes("back");
-        console.log("isRearCamera", isRearCamera);
+      // Find the rear camera
+      const rearCamera =
+        videoDevices.find(
+          (device) =>
+            device.label.toLowerCase().includes("back") ||
+            device.label.toLowerCase().includes("rear")
+        ) || videoDevices[0];
 
-        const constraints = {
-          video: {
-            deviceId: rearCamera.deviceId
-              ? { exact: rearCamera.deviceId }
-              : undefined,
-            facingMode: true ? { exact: "environment" } : "user",
-          },
-        };
-        console.log("constraints", constraints);
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        videoRef.current.srcObject = stream;
-        setIsVideo(true);
+      const isRearCamera =
+        rearCamera && rearCamera.label.toLowerCase().includes("back");
+      console.log("ezeze", isRearCamera);
+      const constraints = {
+        video: {
+          deviceId: rearCamera.deviceId
+            ? { exact: rearCamera.deviceId }
+            : undefined,
+          facingMode: true ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
+        },
+      };
+      console.log("constraints", constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      videoRef.current.srcObject = stream;
 
-        // Start hand detection once video starts
-        handTrack.startVideo(videoRef.current).then((status) => {
-          if (status) {
-            runDetection();
-          } else {
-            console.log("Unable to start video");
-          }
+      const modelParams = {
+        flipHorizontal: false, // Flip camera for selfie view
+        maxNumBoxes: 1, // Only detect one hand
+        scoreThreshold: 0.6, // Confidence threshold
+      };
+      handTrack
+        .load(modelParams)
+        .then((loadedModel) => {
+          setModel(loadedModel);
+        })
+        .catch((err) => {
+          setError(err);
+          console.error("Model loading error:", err);
         });
-      } catch (err) {
-        console.error("Error accessing camera: ", err);
-      }
-    } else {
-      console.log("Model not loaded yet.");
+      setIsVideo(true);
+
+      // Start hand detection once video starts
+      handTrack.startVideo(videoRef.current).then((status) => {
+        if (status) {
+          runDetection();
+        } else {
+          console.log("Unable to start video");
+        }
+      });
+    } catch (err) {
+      console.error("Error accessing camera: ", err);
     }
   };
 
@@ -97,7 +92,8 @@ const HandTrackMobile = () => {
             setHandPosition({ x: handX, y: handY });
             // Transform handPosition to 3D coordinates
             setImagePosition({
-              imagePosition,
+              x: (handX / window.innerWidth) * 2 - 1, // Normalized X coordinate
+              y: -(handY / window.innerHeight) * 2 + 1, // Normalized Y coordinate
             });
           }
           requestAnimationFrame(detect); // Continue detection in a loop
@@ -131,6 +127,24 @@ const HandTrackMobile = () => {
       </mesh>
     ) : null;
   };
+
+  useEffect(() => {
+    // Load the handTrack model once when the component mounts
+    /*  const modelParams = {
+      flipHorizontal: false, // Flip camera for selfie view
+      maxNumBoxes: 1, // Only detect one hand
+      scoreThreshold: 0.6, // Confidence threshold
+    };
+    handTrack
+      .load(modelParams)
+      .then((loadedModel) => {
+        setModel(loadedModel);
+      })
+      .catch((err) => {
+        setError(err);
+        console.error("Model loading error:", err);
+      }); */
+  }, []);
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
@@ -174,7 +188,7 @@ const HandTrackMobile = () => {
           autoPlay
         />
         <div>
-          {handPosition && (
+          {handPosition && imagePosition && (
             <Canvas
               shadows
               camera={{ fov: 45 }}

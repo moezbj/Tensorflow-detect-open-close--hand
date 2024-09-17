@@ -12,5 +12,7 @@ code {
     monospace;
 }
 video {
-  height: 400px  !important;
+  height: auto !important;
+  width: 100vw;
+  max-height: 400px !important;
 }
