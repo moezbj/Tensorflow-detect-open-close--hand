@@ -11,45 +11,37 @@ const HandTrackMobile = () => {
   const [handPosition, setHandPosition] = useState(null);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
+  const [labels, setLables] = useState([]);
 
   const startVideo = async () => {
     setError("");
 
     try {
-      if (videoRef.current.srcObject) {
-        const existingStream = videoRef.current.srcObject;
-        const tracks = existingStream.getTracks();
-        tracks.forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
-      }
-
-      // Get available media devices
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-
+      console.log("videoDevices", videoDevices);
+      setLables(videoDevices);
       // Find the rear camera
-      const rearCamera = videoDevices.find(
-        (device) =>
-          device.label.toLowerCase().includes("back") ||
-          device.label.toLowerCase().includes("rear")
-      );
+      const rearCamera =
+        videoDevices.find(
+          (device) =>
+            device.label.toLowerCase().includes("back") ||
+            device.label.toLowerCase().includes("rear")
+        ) || videoDevices[0];
 
-      if (!rearCamera) {
-        console.error("Rear camera not found.");
-        setError("Rear camera not found.")
-        return;
-      }
-
-      console.log("Selected Rear Camera:", rearCamera);
-
+      const isRearCamera =
+        rearCamera && rearCamera.label.toLowerCase().includes("back");
+      console.log("ezeze", isRearCamera);
       const constraints = {
         video: {
-          deviceId: { exact: rearCamera.deviceId },
+          deviceId: rearCamera.deviceId
+            ? { exact: rearCamera.deviceId }
+            : undefined,
+          facingMode: true ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
         },
       };
-
       console.log("constraints", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoRef.current.srcObject = stream;
@@ -59,21 +51,15 @@ const HandTrackMobile = () => {
         maxNumBoxes: 1, // Only detect one hand
         scoreThreshold: 0.6, // Confidence threshold
       };
-      handTrack
-        .load(modelParams)
-        .then((loadedModel) => {
-          setModel(loadedModel);
-        })
-        .catch((err) => {
-          setError(err);
-          console.error("Model loading error:", err);
-        });
+      const loadedModel = await handTrack.load(modelParams);
+      setModel(loadedModel);
+
       setIsVideo(true);
 
       // Start hand detection once video starts
       handTrack.startVideo(videoRef.current).then((status) => {
         if (status) {
-          runDetection();
+          runDetection(loadedModel);
         } else {
           console.log("Unable to start video");
         }
@@ -91,9 +77,9 @@ const HandTrackMobile = () => {
     setIsVideo(false);
   };
 
-  const runDetection = () => {
+  const runDetection = (loadedModel) => {
     const detect = () => {
-      model.detect(videoRef.current).then((predictions) => {
+      loadedModel.detect(videoRef.current).then((predictions) => {
         if (predictions.length > 0) {
           const hand = predictions[0].bbox; // Bounding box of the detected hand
           const handX = hand[0] + hand[2] / 2; // X position (center of hand)
@@ -157,7 +143,7 @@ const HandTrackMobile = () => {
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
       <h4 style={{ textAlign: "center" }}>v: 0.0.1</h4>
-      <h5>{error}</h5>
+      <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
           style={{ marginBottom: "20px", marginRight: "20px", height: "40px" }}
@@ -174,6 +160,9 @@ const HandTrackMobile = () => {
           Stop Video
         </button>
       </div>
+      {labels.map((f) => (
+        <p>{f.label}</p>
+      ))}
       <div
         style={{
           position: "relative",
