@@ -29,7 +29,7 @@ const HandTrackMobile = () => {
           (device) =>
             device.label.toLowerCase().includes("back") ||
             device.label.toLowerCase().includes("rear")
-        ) || videoDevices[0];
+        ) || videoDevices[1];
 
       const isRearCamera =
         rearCamera && rearCamera.label.toLowerCase().includes("back");
@@ -39,7 +39,7 @@ const HandTrackMobile = () => {
           deviceId: rearCamera.deviceId
             ? { exact: rearCamera.deviceId }
             : undefined,
-          facingMode: true ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
+          facingMode: isRearCamera ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
         },
       };
       console.log("constraints", constraints);
