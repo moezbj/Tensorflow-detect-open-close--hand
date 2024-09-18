@@ -101,19 +101,44 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
-  useEffect(() => {
-    const handleStreamError = () => {
-      // Restart the rear camera if something changes the stream
-      if (rearCameraId) {
-        startVideo(); // Restart the video
-      }
-    };
 
-    window.addEventListener("visibilitychange", handleStreamError);
+  useEffect(() => {
+    if (videoRef.current.srcObject) {
+      const activeStream = videoRef.current.srcObject;
+      const tracks = activeStream.getTracks();
+      tracks.forEach((track) => {
+        // Listen for interruptions (stopped tracks)
+        track.onended = () => {
+          setError("Track ended, restarting rear camera");
+
+          console.log("Track ended, restarting rear camera");
+          startVideo(); // Restart video when stream is interrupted
+        };
+      });
+    }
+  });
+  // Monitor the video stream for camera switches or interruptions
+
+  useEffect(() => {
+    // Add event listeners to monitor stream interruptions or switches
+    const interval = setInterval(() => {
+      if (videoRef.current && rearCameraId && videoRef.current.srcObject) {
+        const videoTracks = videoRef.current.srcObject.getVideoTracks();
+        const currentTrack = videoTracks[0];
+        if (
+          currentTrack &&
+          currentTrack.getSettings().deviceId !== rearCameraId
+        ) {
+          setError("Switched to another camera, restarting rear camera");
+          console.log("Switched to another camera, restarting rear camera");
+          startVideo(); // Restart video if it switched to the front camera
+        }
+      }
+    }, 1000); // Check every second
 
     return () => {
-      window.removeEventListener("visibilitychange", handleStreamError);
-      stopVideo(); // Stop video when unmounting
+      clearInterval(interval);
+      stopVideo(); // Clean up video when unmounting
     };
   }, [rearCameraId]);
   const Image = ({ position }) => {
@@ -161,7 +186,7 @@ const HandTrackMobile = () => {
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.0.3</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.0.4</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
