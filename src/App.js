@@ -13,10 +13,13 @@ const HandTrackMobile = () => {
   const [handPosition, setHandPosition] = useState(null);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   const [rearCameraId, setRearCameraId] = useState(null);
 
   const startVideo = async () => {
     setError("");
+    setIsLoading(true);
     try {
       if (videoRef.current.srcObject) {
         const existingStream = videoRef.current.srcObject;
@@ -28,7 +31,7 @@ const HandTrackMobile = () => {
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-      /* const rearCamera = videoDevices.find(
+      const rearCamera = videoDevices.find(
         (device) =>
           device.label.toLowerCase().includes("back") ||
           device.label.toLowerCase().includes("rear")
@@ -41,11 +44,11 @@ const HandTrackMobile = () => {
 
       setRearCameraId(rearCamera.deviceId); // Save the rear camera device ID
 
-      console.log("Selected Rear Camera:", rearCamera); */
+      console.log("Selected Rear Camera:", rearCamera);
       const constraints = {
         video: {
-          faceMode: { exact: "user" },
-          //deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
+          faceMode: { exact: "environment" },
+          deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
         },
       };
       console.log("constraints", constraints);
@@ -59,13 +62,13 @@ const HandTrackMobile = () => {
       };
       const loadedModel = await handTrack.load(modelParams);
       setModel(loadedModel);
-
+      setIsLoading(false);
       setIsVideo(true);
 
       // Start hand detection once video starts
       handTrack.startVideo(videoRef.current).then((status) => {
         if (status) {
-          runDetection();
+          runDetection(loadedModel);
         } else {
           console.log("Unable to start video");
         }
@@ -104,7 +107,6 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
-
   /*  useEffect(() => {
     if (videoRef.current.srcObject) {
       const activeStream = videoRef.current.srcObject;
@@ -178,7 +180,7 @@ const HandTrackMobile = () => {
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.0.5</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.0.6</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
@@ -204,6 +206,7 @@ const HandTrackMobile = () => {
           backgroundColor: "wheat",
         }}
       >
+        {isLoading && <p>Loading...</p>}
         <video
           ref={videoRef}
           className="video-container"
