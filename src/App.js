@@ -125,7 +125,7 @@ const HandTrackMobile = () => {
   }); */
   // Monitor the video stream for camera switches or interruptions
 
-  /* useEffect(() => {
+  useEffect(() => {
     // Add event listeners to monitor stream interruptions or switches
     const interval = setInterval(() => {
       if (videoRef.current && rearCameraId && videoRef.current.srcObject) {
@@ -146,7 +146,7 @@ const HandTrackMobile = () => {
       clearInterval(interval);
       stopVideo(); // Clean up video when unmounting
     };
-  }, [rearCameraId]); */
+  }, [rearCameraId]);
   const Image = ({ position }) => {
     const imageRef = useRef();
     const texture = useLoader(THREE.TextureLoader, "/henna.png");
