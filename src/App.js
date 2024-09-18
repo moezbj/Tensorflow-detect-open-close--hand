@@ -25,7 +25,7 @@ const HandTrackMobile = () => {
     );
     setVideoDevices(videoDevices);
     if (videoDevices.length > 0) {
-      setSelectedDeviceId(videoDevices[0].deviceId); // Select the first camera by default
+      setSelectedDeviceId(videoDevices[1].deviceId); // Select the first camera by default
     }
   };
 
@@ -39,10 +39,7 @@ const HandTrackMobile = () => {
         tracks.forEach((track) => track.stop());
         videoRef.current.srcObject = null;
       }
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(
-        (device) => device.kind === "videoinput"
-      );
+
       const rearCamera = videoDevices.find(
         (device) =>
           device.label.toLowerCase().includes("back") ||
@@ -51,20 +48,18 @@ const HandTrackMobile = () => {
 
       if (!rearCamera) {
         console.error("Rear camera not found.");
+        setError("Rear camera not found.")
         setIsLoading(false);
         return;
       }
 
       setRearCameraId(rearCamera.deviceId); // Save the rear camera device ID
 
-      console.log("Selected Rear Camera:", rearCamera);
       const constraints = {
         video: {
           faceMode: { exact: "environment" },
-          deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
         },
       };
-      console.log("constraints", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoRef.current.srcObject = stream;
 
@@ -119,45 +114,6 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
- /*  useEffect(() => {
-    if (videoRef.current.srcObject) {
-      const activeStream = videoRef.current.srcObject;
-      const tracks = activeStream.getTracks();
-      tracks.forEach((track) => {
-        // Listen for interruptions (stopped tracks)
-        track.onended = () => {
-          setError("Track ended, restarting rear camera");
-
-          console.log("Track ended, restarting rear camera");
-          startVideo(); // Restart video when stream is interrupted
-        };
-      });
-    }
-  }); */
-  // Monitor the video stream for camera switches or interruptions
-
-/*   useEffect(() => {
-    // Add event listeners to monitor stream interruptions or switches
-    const interval = setInterval(() => {
-      if (videoRef.current && rearCameraId && videoRef.current.srcObject) {
-        const videoTracks = videoRef.current.srcObject.getVideoTracks();
-        const currentTrack = videoTracks[0];
-        if (
-          currentTrack &&
-          currentTrack.getSettings().deviceId !== rearCameraId
-        ) {
-          setError("Switched to another camera, restarting rear camera");
-          console.log("Switched to another camera, restarting rear camera");
-          startVideo(); // Restart video if it switched to the front camera
-        }
-      }
-    }, 1000); // Check every second
-
-    return () => {
-      clearInterval(interval);
-      stopVideo(); // Clean up video when unmounting
-    };
-  }, [rearCameraId]); */
 
   const handleCameraChange = (event) => {
     const deviceId = event.target.value;
@@ -207,7 +163,7 @@ const HandTrackMobile = () => {
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.0.6</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.1.0</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
