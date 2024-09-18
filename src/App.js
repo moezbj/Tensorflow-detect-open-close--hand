@@ -108,7 +108,7 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
-  /*  useEffect(() => {
+   useEffect(() => {
     if (videoRef.current.srcObject) {
       const activeStream = videoRef.current.srcObject;
       const tracks = activeStream.getTracks();
@@ -122,7 +122,7 @@ const HandTrackMobile = () => {
         };
       });
     }
-  }); */
+  });
   // Monitor the video stream for camera switches or interruptions
 
   useEffect(() => {
