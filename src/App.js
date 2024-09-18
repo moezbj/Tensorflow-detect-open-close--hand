@@ -14,8 +14,20 @@ const HandTrackMobile = () => {
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  const [videoDevices, setVideoDevices] = useState([]); // Store available cameras
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null); // Selected camera
   const [rearCameraId, setRearCameraId] = useState(null);
+
+  const getVideoDevices = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(
+      (device) => device.kind === "videoinput"
+    );
+    setVideoDevices(videoDevices);
+    if (videoDevices.length > 0) {
+      setSelectedDeviceId(videoDevices[0].deviceId); // Select the first camera by default
+    }
+  };
 
   const startVideo = async () => {
     setError("");
@@ -67,13 +79,12 @@ const HandTrackMobile = () => {
       setIsVideo(true);
 
       // Start hand detection once video starts
-      handTrack.startVideo(videoRef.current).then((status) => {
-        if (status) {
-          runDetection(loadedModel);
-        } else {
-          console.log("Unable to start video");
-        }
-      });
+      const status = await handTrack.startVideo(videoRef.current);
+      if (status) {
+        runDetection(loadedModel);
+      } else {
+        console.error("Failed to start video.");
+      }
     } catch (err) {
       console.error("Error accessing camera: ", err);
     }
@@ -108,7 +119,7 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
-   useEffect(() => {
+  useEffect(() => {
     if (videoRef.current.srcObject) {
       const activeStream = videoRef.current.srcObject;
       const tracks = activeStream.getTracks();
@@ -147,6 +158,21 @@ const HandTrackMobile = () => {
       stopVideo(); // Clean up video when unmounting
     };
   }, [rearCameraId]);
+
+  const handleCameraChange = (event) => {
+    const deviceId = event.target.value;
+    setSelectedDeviceId(deviceId);
+    startVideo(deviceId); // Start the video with the selected camera
+  };
+
+  useEffect(() => {
+    getVideoDevices(); // Get available cameras on mount
+
+    return () => {
+      stopVideo(); // Clean up video when unmounting
+    };
+  }, []);
+
   const Image = ({ position }) => {
     const imageRef = useRef();
     const texture = useLoader(THREE.TextureLoader, "/henna.png");
@@ -186,7 +212,7 @@ const HandTrackMobile = () => {
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
           style={{ marginBottom: "20px", marginRight: "20px", height: "40px" }}
-          onClick={startVideo}
+          onClick={() => startVideo(selectedDeviceId)}
           disabled={isVideo}
         >
           Start Video
@@ -198,6 +224,13 @@ const HandTrackMobile = () => {
         >
           Stop Video
         </button>
+        <select value={selectedDeviceId} onChange={handleCameraChange} style={{marginLeft:"20px", height:'40px'}}>
+          {videoDevices.map((device) => (
+            <option key={device.deviceId} value={device.deviceId}>
+              {device.label || `Camera ${device.deviceId}`}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div
