@@ -42,6 +42,7 @@ const HandTrackMobile = () => {
       console.log("Selected Rear Camera:", rearCamera);
       const constraints = {
         video: {
+          faceMode: {exact: "environment"},
           deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
         },
       };
@@ -102,7 +103,7 @@ const HandTrackMobile = () => {
     detect(); // Start detection loop
   };
 
-  useEffect(() => {
+  /*  useEffect(() => {
     if (videoRef.current.srcObject) {
       const activeStream = videoRef.current.srcObject;
       const tracks = activeStream.getTracks();
@@ -116,7 +117,7 @@ const HandTrackMobile = () => {
         };
       });
     }
-  });
+  }); */
   // Monitor the video stream for camera switches or interruptions
 
   useEffect(() => {
@@ -147,7 +148,7 @@ const HandTrackMobile = () => {
 
     useEffect(() => {
       const loader = new TextureLoader();
-      loader.load("/logo192.png", (texture) => {
+      loader.load("/henna.png", (texture) => {
         setTexture(texture);
       });
     }, []);
