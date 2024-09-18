@@ -11,35 +11,38 @@ const HandTrackMobile = () => {
   const [handPosition, setHandPosition] = useState(null);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState("");
-  const [labels, setLables] = useState([]);
+  const [rearCameraId, setRearCameraId] = useState(null);
 
   const startVideo = async () => {
     setError("");
-
     try {
+      if (videoRef.current.srcObject) {
+        const existingStream = videoRef.current.srcObject;
+        const tracks = existingStream.getTracks();
+        tracks.forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      }
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-      console.log("videoDevices", videoDevices);
-      setLables(videoDevices);
-      // Find the rear camera
-      const rearCamera =
-        videoDevices.find(
-          (device) =>
-            device.label.toLowerCase().includes("back") ||
-            device.label.toLowerCase().includes("rear")
-        ) || videoDevices[1];
+      const rearCamera = videoDevices.find(
+        (device) =>
+          device.label.toLowerCase().includes("back") ||
+          device.label.toLowerCase().includes("rear")
+      );
 
-      const isRearCamera =
-        rearCamera && rearCamera.label.toLowerCase().includes("back");
-      console.log("ezeze", isRearCamera);
+      if (!rearCamera) {
+        console.error("Rear camera not found.");
+        return;
+      }
+
+      setRearCameraId(rearCamera.deviceId); // Save the rear camera device ID
+
+      console.log("Selected Rear Camera:", rearCamera);
       const constraints = {
         video: {
-          deviceId: rearCamera.deviceId
-            ? { exact: rearCamera.deviceId }
-            : undefined,
-          facingMode: isRearCamera ? { exact: "environment" } : "user", // 'user' for front camera, 'environment' for rear camera
+          deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
         },
       };
       console.log("constraints", constraints);
@@ -70,10 +73,12 @@ const HandTrackMobile = () => {
   };
 
   const stopVideo = () => {
-    const stream = videoRef.current.srcObject;
-    const tracks = stream.getTracks();
-    tracks.forEach((track) => track.stop());
-    videoRef.current.srcObject = null;
+    if (videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
     setIsVideo(false);
   };
 
@@ -96,7 +101,21 @@ const HandTrackMobile = () => {
     };
     detect(); // Start detection loop
   };
+  useEffect(() => {
+    const handleStreamError = () => {
+      // Restart the rear camera if something changes the stream
+      if (rearCameraId) {
+        startVideo(); // Restart the video
+      }
+    };
 
+    window.addEventListener("visibilitychange", handleStreamError);
+
+    return () => {
+      window.removeEventListener("visibilitychange", handleStreamError);
+      stopVideo(); // Stop video when unmounting
+    };
+  }, [rearCameraId]);
   const Image = ({ position }) => {
     const [texture, setTexture] = useState(null);
     const imageRef = useRef();
@@ -142,7 +161,7 @@ const HandTrackMobile = () => {
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.0.2</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.0.3</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
@@ -160,9 +179,7 @@ const HandTrackMobile = () => {
           Stop Video
         </button>
       </div>
-      {labels.map((f) => (
-        <p>{f.label}</p>
-      ))}
+
       <div
         style={{
           position: "relative",
