@@ -48,7 +48,7 @@ const HandTrackMobile = () => {
 
       if (!rearCamera) {
         console.error("Rear camera not found.");
-        setError("Rear camera not found.")
+        setError("Rear camera not found.");
         setIsLoading(false);
         return;
       }
@@ -57,14 +57,16 @@ const HandTrackMobile = () => {
 
       const constraints = {
         video: {
-          faceMode: { exact: "environment" },
+          deviceId: rearCamera.deviceId
+            ? { exact: rearCamera.deviceId }
+            : undefined, // Use rear camera deviceId
         },
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoRef.current.srcObject = stream;
 
       const modelParams = {
-        flipHorizontal: false, // Flip camera for selfie view
+        flipHorizontal: false, // Don't flip for the rear camera
         maxNumBoxes: 1, // Only detect one hand
         scoreThreshold: 0.6, // Confidence threshold
       };
@@ -82,6 +84,8 @@ const HandTrackMobile = () => {
       }
     } catch (err) {
       console.error("Error accessing camera: ", err);
+      setError("Error accessing camera.");
+      setIsLoading(false);
     }
   };
 
@@ -163,7 +167,7 @@ const HandTrackMobile = () => {
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.1.0</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.1.1</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
@@ -180,7 +184,11 @@ const HandTrackMobile = () => {
         >
           Stop Video
         </button>
-        <select value={selectedDeviceId} onChange={handleCameraChange} style={{marginLeft:"20px", height:'40px'}}>
+        <select
+          value={selectedDeviceId}
+          onChange={handleCameraChange}
+          style={{ marginLeft: "20px", height: "40px" }}
+        >
           {videoDevices.map((device) => (
             <option key={device.deviceId} value={device.deviceId}>
               {device.label || `Camera ${device.deviceId}`}
