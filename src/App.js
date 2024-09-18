@@ -3,6 +3,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import React, { useEffect, useRef, useState } from "react";
 import * as handTrack from "handtrackjs";
 import { PresentationControls, Stage } from "@react-three/drei";
+import { useLoader } from "@react-three/fiber";
+import * as THREE from "three";
 
 const HandTrackMobile = () => {
   const videoRef = useRef(null);
@@ -26,7 +28,7 @@ const HandTrackMobile = () => {
       const videoDevices = devices.filter(
         (device) => device.kind === "videoinput"
       );
-      const rearCamera = videoDevices.find(
+      /* const rearCamera = videoDevices.find(
         (device) =>
           device.label.toLowerCase().includes("back") ||
           device.label.toLowerCase().includes("rear")
@@ -39,11 +41,11 @@ const HandTrackMobile = () => {
 
       setRearCameraId(rearCamera.deviceId); // Save the rear camera device ID
 
-      console.log("Selected Rear Camera:", rearCamera);
+      console.log("Selected Rear Camera:", rearCamera); */
       const constraints = {
         video: {
-          faceMode: {exact: "environment"},
-          deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
+          faceMode: { exact: "user" },
+          //deviceId: { exact: rearCamera.deviceId }, // Force use of rear camera
         },
       };
       console.log("constraints", constraints);
@@ -63,7 +65,7 @@ const HandTrackMobile = () => {
       // Start hand detection once video starts
       handTrack.startVideo(videoRef.current).then((status) => {
         if (status) {
-          runDetection(loadedModel);
+          runDetection();
         } else {
           console.log("Unable to start video");
         }
@@ -143,15 +145,22 @@ const HandTrackMobile = () => {
     };
   }, [rearCameraId]);
   const Image = ({ position }) => {
-    const [texture, setTexture] = useState(null);
     const imageRef = useRef();
+    const texture = useLoader(THREE.TextureLoader, "/henna.png");
 
     useEffect(() => {
-      const loader = new TextureLoader();
-      loader.load("/henna.png", (texture) => {
-        setTexture(texture);
-      });
-    }, []);
+      if (texture) {
+        const aspectRatio = texture.image.width / texture.image.height;
+        const planeWidth = 1; // Set this to the desired width
+        const planeHeight = planeWidth / aspectRatio;
+        // Adjust the plane geometry to the image aspect ratio
+        imageRef.current.geometry.dispose(); // Dispose the old geometry
+        imageRef.current.geometry = new THREE.PlaneGeometry(
+          planeWidth,
+          planeHeight
+        );
+      }
+    }, [texture]);
 
     useFrame(() => {
       if (imageRef.current) {
@@ -166,28 +175,10 @@ const HandTrackMobile = () => {
     ) : null;
   };
 
-  /*useEffect(() => {
-    // Load the handTrack model once when the component mounts
-      const modelParams = {
-      flipHorizontal: false, // Flip camera for selfie view
-      maxNumBoxes: 1, // Only detect one hand
-      scoreThreshold: 0.6, // Confidence threshold
-    };
-    handTrack
-      .load(modelParams)
-      .then((loadedModel) => {
-        setModel(loadedModel);
-      })
-      .catch((err) => {
-        setError(err);
-        console.error("Model loading error:", err);
-      }); 
-  }, []);*/
-  console.log("handPosition", handPosition && imagePosition);
   return (
     <div>
       <h1 style={{ textAlign: "center" }}>HandTrack.js Mobile</h1>
-      <h4 style={{ textAlign: "center" }}>v: 0.0.4</h4>
+      <h4 style={{ textAlign: "center" }}>v: 0.0.5</h4>
       <h5 style={{ textAlign: "center", color: "red" }}>{error}</h5>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <button
@@ -231,14 +222,14 @@ const HandTrackMobile = () => {
           {handPosition && imagePosition && (
             <Canvas
               shadows
-              camera={{ fov: 45 }}
+              camera={{ fov: 120 }}
               dpr={[1, 2]}
               style={{ position: "absolute", zIndex: 2 }}
             >
               <PresentationControls
                 speed={1.5}
                 global
-                zoom={0.5}
+                zoom={0.1}
                 polar={[-0.1, Math.PI / 4]}
               >
                 <Stage environment={"sunset"}>
