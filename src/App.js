@@ -1,10 +1,10 @@
 import { TextureLoader } from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
 import React, { useEffect, useRef, useState } from "react";
 import * as handTrack from "handtrackjs";
 import { PresentationControls, Stage } from "@react-three/drei";
 import { useLoader } from "@react-three/fiber";
 import * as THREE from "three";
+import { Canvas, useFrame } from "@react-three/fiber";
 
 const HandTrackMobile = () => {
   const videoRef = useRef(null);
