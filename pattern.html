@@ -1,0 +1,168 @@
+Close. & open hand
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Handpose with tfjs</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1.0, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width=360 height=360></canvas>
+    <video id="video" width=360 height=360 autoplay style="display:none"></video>
+    <canvas id="overlayCanvas" width=360 height=360></canvas>
+
+    <script>
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let overlayCanvas = document.getElementById("overlayCanvas");
+        let ctx = canvas.getContext("2d");
+        let overlayCtx = overlayCanvas.getContext("2d");
+        let hands;
+        let detector;
+        let isClosed;
+        let image = new Image();
+        image.src = "./models/henna.png";
+        image.onload = () => {
+            console.log("Image loaded successfully");
+        };
+
+        let showKeyPoints = true;
+        let useFront = false;
+
+        function startVideo() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                let mode = useFront ? "user" : "environment";
+                navigator.mediaDevices.getUserMedia({ audio: false, video: { width: 360, height: 360, facingMode: mode } }).then(function (stream) {
+                    video.addEventListener("loadedmetadata", loadModel);
+                    video.srcObject = stream;
+                    video.play();
+                    drawCameraIntoCanvas();
+                }).catch(err => {
+                    console.error("Error accessing media devices.", err);
+                });
+            }
+        }
+
+        async function loadModel() {
+            const model = handPoseDetection.SupportedModels.MediaPipeHands;
+            const detectorConfig = {
+                runtime: 'mediapipe',
+                maxHands: 2,
+                solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/hands"
+            };
+            detector = await handPoseDetection.createDetector(model, detectorConfig);
+            estimateHands();
+        }
+
+        async function estimateHands() {
+            const estimationConfig = { flipHorizontal: useFront };
+            const rawHands = await detector.estimateHands(video, estimationConfig);
+            hands = getKeypoints(rawHands);
+            isClosed = checkIfHandIsClosed();
+            if (isClosed) {
+                console.log("Hand is closed");
+            } else {
+                console.log("Hand is open");
+            }
+            drawHandOverlay();
+            window.requestAnimationFrame(estimateHands);
+        }
+
+        function drawCameraIntoCanvas() {
+            if (useFront) {
+                ctx.clearRect(0, 0, 360, 360);
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.translate(-360, 0);
+                ctx.drawImage(video, 0, 0, 360, 360);
+                ctx.restore();
+            } else {
+                ctx.drawImage(video, 0, 0, 360, 360);
+            }
+            window.requestAnimationFrame(drawCameraIntoCanvas);
+        }
+
+        function drawHandOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            if (hands.length > 0) {
+                let hand = hands[0];
+                let palmCenter = hand.keypoints[9];
+                if (palmCenter && isClosed) {
+                    let imgWidth = 140;
+                    let imgHeight = 140;
+                    let centerX = (overlayCanvas.width / 2) - (imgWidth / 2);
+                    let centerY = (overlayCanvas.height / 2) - (imgHeight / 2);
+                    overlayCtx.drawImage(image, centerX, centerY, imgWidth, imgHeight);
+                }
+            }
+        }
+
+        function getKeypoints(hands) {
+            let keypoints = [];
+            for (let i = 0; i < hands.length; i += 1) {
+                let hand = {};
+                let points = [];
+                for (let j = 0; j < hands[i].keypoints.length; j += 1) {
+                    let keypoint = hands[i].keypoints[j];
+                    points.push([keypoint.x * canvas.width, keypoint.y * canvas.height]);
+                }
+                hand.handedness = hands[i].handedness;
+                hand.keypoints = points;
+                keypoints.push(hand);
+            }
+            return keypoints;
+        }
+        function checkIfHandIsClosed() {
+            if (hands.length > 0) {
+                let hand = hands[0];
+                const wrist = hand.keypoints[0]; // Wrist (palm base)
+
+                // Fingertip indices: Thumb (4), Index (8), Middle (12), Ring (16), Pinky (20)
+                const fingers = [4, 8, 12, 16, 20];
+
+                let closed = true;
+
+                for (let i = 0; i < fingers.length; i++) {
+                    const fingerTip = hand.keypoints[fingers[i]];
+
+                    // Calculate the 2D distance between the wrist and each fingertip
+                    const distance = Math.sqrt(
+                        Math.pow(fingerTip[0] - wrist[0], 2) +  // x-coordinate
+                        Math.pow(fingerTip[1] - wrist[1], 2)    // y-coordinate
+                    );
+                    console.log('distance', distance / 1000)
+                    // If any fingertip is farther than a certain threshold, hand is open
+                    if ((distance / 1000) > 60) {  // Adjust this threshold value as needed
+                        closed = false;
+                        break;
+                    }
+                }
+                return closed;
+            }
+            return false;
+        }
+
+        startVideo();
+    </script>
+</body>
+
+</html>
